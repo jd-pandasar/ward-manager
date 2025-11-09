@@ -1,0 +1,1085 @@
+# Implementation Plan
+
+- [x] 1. Set up project structure and core configuration
+  - Create directory structure for services, models, controllers, middleware, and utilities
+  - Set up TypeScript configuration with strict mode
+  - Configure environment variables for database, Redis, JWT secrets, and security settings
+  - Install core dependencies: Express/NestJS, PostgreSQL client, Redis client, bcrypt, jsonwebtoken
+  - Create database connection module with connection pooling
+  - Create Redis connection module for session storage
+  - _Requirements: 1.1, 1.3, 5.5, 6.2_
+
+- [ ] 2. Implement database schema and migrations
+  - [ ] 2.1 Create database migration for User table
+    - Write migration to create users table with all fields from User model
+    - Add unique constraint on email field
+    - Add indexes for email and isActive fields
+    - _Requirements: 1.1, 2.1, 2.4_
+  - [ ] 2.2 Create database migration for Role and Permission tables
+    - Write migration for roles table with system role flag
+    - Write migration for permissions table with module reference
+    - Write migration for modules table
+    - Add unique constraints on role names and permission names
+    - _Requirements: 3.1, 3.5, 4.1_
+  - [ ] 2.3 Create database migration for join tables
+    - Write migration for user_roles join table with foreign keys
+    - Write migration for role_permissions join table with foreign keys
+    - Add composite primary keys and indexes
+    - _Requirements: 3.2, 3.4_
+  - [ ] 2.4 Create database migration for Session and AuditLog tables
+    - Write migration for sessions table with token index
+    - Write migration for audit_logs table with timestamp index
+    - Add foreign key constraints to users table
+    - _Requirements: 5.1, 5.5, 2.5, 6.4_
+  - [ ] 2.5 Create seed script for default roles and permissions
+    - Write seed data for Admin and User roles
+    - Write seed data for core permissions (user management, role management)
+    - Create initial admin user account
+    - _Requirements: 3.5_
+
+- [ ] 3. Implement data models and repositories
+  - [ ] 3.1 Create User model and repository
+    - Define User interface with all fields from design
+    - Implement UserRepository with CRUD methods
+    - Add methods for finding by email and updating login attempts
+    - _Requirements: 2.1, 2.3_
+  - [ ] 3.2 Create Role and Permission models and repositories
+    - Define Role and Permission interfaces
+    - Implement RoleRepository with CRUD and permission association methods
+    - Implement PermissionRepository with query methods
+    - _Requirements: 3.1, 3.4_
+  - [ ] 3.3 Create Module model and repository
+    - Define Module interface
+    - Implement ModuleRepository with CRUD and status update methods
+    - _Requirements: 4.1_
+  - [ ] 3.4 Create Session model and repository
+    - Define Session interface
+    - Implement SessionRepository with Redis-backed storage
+    - Add methods for token lookup and expiration cleanup
+    - _Requirements: 5.1, 5.5_
+  - [ ] 3.5 Create AuditLog model and repository
+    - Define AuditLog interface
+    - Implement AuditLogRepository with insert and query methods
+    - _Requirements: 2.5, 6.4_
+
+- [ ] 4. Implement Authentication Service
+  - [ ] 4.1 Create password hashing utilities
+    - Implement password hashing function using bcrypt with cost factor 12
+    - Implement password verification function
+    - Add password strength validation
+    - _Requirements: 1.3_
+  - [ ] 4.2 Implement login functionality
+    - Create login method that validates credentials
+    - Implement account lockout logic after failed attempts
+    - Generate JWT token on successful authentication
+    - Create session record in database
+    - Log authentication events to audit log
+    - _Requirements: 1.1, 1.2, 6.3, 6.4_
+  - [ ] 4.3 Implement logout functionality
+    - Create logout method that invalidates session token
+    - Remove session from Redis and database
+    - Log logout event to audit log
+    - _Requirements: 1.5_
+  - [ ] 4.4 Implement token validation and refresh
+    - Create method to validate JWT tokens
+    - Implement token refresh logic with session extension
+    - Handle expired token scenarios
+    - _Requirements: 1.4, 5.4_
+  - [ ] 4.5 Write unit tests for Authentication Service
+    - Test password hashing and verification
+    - Test login with valid and invalid credentials
+    - Test account lockout mechanism
+    - Test token generation and validation
+    - Test logout functionality
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [ ] 5. Implement Session Manager
+  - [ ] 5.1 Create session creation and storage
+    - Implement createSession method with Redis storage
+    - Store session metadata (IP, user agent, timestamps)
+    - Set session expiration in Redis
+    - _Requirements: 5.1, 5.5_
+  - [ ] 5.2 Implement session retrieval and validation
+    - Create getSession method with Redis lookup
+    - Validate session expiration
+    - Update lastActivityAt on each access
+    - _Requirements: 5.1, 5.2_
+  - [ ] 5.3 Implement session refresh and timeout extension
+    - Create refreshSession method that extends expiration
+    - Implement activity-based timeout renewal
+    - _Requirements: 5.2, 5.4_
+  - [ ] 5.4 Implement session cleanup
+    - Create method to destroy individual sessions
+    - Implement background job to clean expired sessions
+    - _Requirements: 5.1_
+  - [ ] 5.5 Write unit tests for Session Manager
+    - Test session creation and storage
+    - Test session retrieval and validation
+    - Test session refresh logic
+    - Test session cleanup
+    - _Requirements: 5.1, 5.2, 5.4_
+
+- [ ] 6. Implement Authorization Service
+  - [ ] 6.1 Create permission checking logic
+    - Implement checkModuleAccess method
+    - Implement checkPermission method for resource-action pairs
+    - Query user roles and associated permissions
+    - _Requirements: 3.3, 4.2, 4.3_
+  - [ ] 6.2 Implement role evaluation
+    - Create evaluateRoles method to get all user roles
+    - Aggregate permissions from multiple roles
+    - _Requirements: 3.2, 3.3_
+  - [ ] 6.3 Implement permission queries for UI
+    - Create getUserPermissions method
+    - Create getUserModules method to list accessible modules
+    - _Requirements: 4.1, 4.5_
+  - [ ] 6.4 Add permission caching layer
+    - Implement Redis-based caching for permission lookups
+    - Set cache TTL and invalidation strategy
+    - _Requirements: 3.3, 4.2_
+  - [ ] 6.5 Write unit tests for Authorization Service
+    - Test module access checks
+    - Test permission checks for various scenarios
+    - Test role evaluation with multiple roles
+    - Test permission caching
+    - _Requirements: 3.3, 4.2, 4.3_
+
+- [ ] 7. Implement User Service
+  - [ ] 7.1 Create user CRUD operations
+    - Implement createUser method with validation
+    - Implement getUserById and getUserByEmail methods
+    - Implement updateUser method
+    - Implement deactivateUser method
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [ ] 7.2 Implement user-role management
+    - Create assignRole method
+    - Create removeRole method
+    - Validate role assignments
+    - _Requirements: 3.2_
+  - [ ] 7.3 Add audit logging for user operations
+    - Log user creation events
+    - Log user updates and deactivation
+    - Log role assignments and removals
+    - _Requirements: 2.5_
+  - [ ] 7.4 Write unit tests for User Service
+    - Test user creation with validation
+    - Test user retrieval methods
+    - Test user updates
+    - Test user deactivation
+    - Test role assignment and removal
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2_
+
+- [ ] 8. Implement Role & Permission Service
+  - [ ] 8.1 Create role management operations
+    - Implement createRole method
+    - Implement updateRole method
+    - Implement deleteRole method with system role protection
+    - _Requirements: 3.1, 3.4_
+  - [ ] 8.2 Create permission management operations
+    - Implement assignPermissionToRole method
+    - Implement removePermissionFromRole method
+    - Implement getPermissionsByRole method
+    - _Requirements: 3.4_
+  - [ ] 8.3 Write unit tests for Role & Permission Service
+    - Test role creation and updates
+    - Test role deletion with system role protection
+    - Test permission assignment to roles
+    - Test permission removal from roles
+    - _Requirements: 3.1, 3.4_
+
+- [ ] 9. Implement Module Registry
+  - [ ] 9.1 Create module registration and management
+    - Implement registerModule method
+    - Implement getModule and listModules methods
+    - Implement updateModuleStatus method
+    - _Requirements: 4.1_
+  - [ ] 9.2 Create module permission management
+    - Implement getModulePermissions method
+    - Link permissions to modules during registration
+    - _Requirements: 4.5_
+  - [ ] 9.3 Write unit tests for Module Registry
+    - Test module registration
+    - Test module retrieval and listing
+    - Test module status updates
+    - Test module permission queries
+    - _Requirements: 4.1, 4.5_
+
+- [ ] 10. Implement Audit Logger
+  - [ ] 10.1 Create audit logging methods
+    - Implement logAuthEvent method
+    - Implement logAccessAttempt method
+    - Implement logUserChange method
+    - _Requirements: 2.5, 6.4_
+  - [ ] 10.2 Create audit query functionality
+    - Implement queryAuditLog method with filters
+    - Add pagination support
+    - _Requirements: 6.4_
+  - [ ] 10.3 Write unit tests for Audit Logger
+    - Test logging of various event types
+    - Test audit log queries with filters
+    - _Requirements: 2.5, 6.4_
+
+- [ ] 11. Implement authentication middleware
+  - [ ] 11.1 Create JWT verification middleware
+    - Extract token from Authorization header or cookies
+    - Validate token signature and expiration
+    - Attach user information to request object
+    - Handle invalid or missing tokens
+    - _Requirements: 1.4, 5.5_
+  - [ ] 11.2 Create session validation middleware
+    - Verify session exists and is not expired
+    - Update session activity timestamp
+    - Handle session expiration
+    - _Requirements: 5.1, 5.2_
+  - [ ] 11.3 Write unit tests for authentication middleware
+    - Test token extraction and validation
+    - Test session validation
+    - Test error handling for invalid tokens
+    - _Requirements: 1.4, 5.1, 5.2_
+
+- [ ] 12. Implement authorization middleware
+  - [ ] 12.1 Create permission checking middleware
+    - Create middleware factory that accepts required permissions
+    - Check user permissions against requirements
+    - Return 403 Forbidden if insufficient permissions
+    - _Requirements: 4.2, 4.3_
+  - [ ] 12.2 Create module access middleware
+    - Verify user has access to requested module
+    - Return 403 Forbidden if module access denied
+    - _Requirements: 4.2, 4.3_
+  - [ ] 12.3 Write unit tests for authorization middleware
+    - Test permission checking with various scenarios
+    - Test module access validation
+    - Test error responses
+    - _Requirements: 4.2, 4.3_
+
+- [ ] 13. Implement security middleware
+  - [ ] 13.1 Create rate limiting middleware
+    - Implement general API rate limiting (100 req/min per user)
+    - Implement authentication rate limiting (5 attempts per 15 min per IP)
+    - Use Redis for distributed rate limit tracking
+    - _Requirements: 6.3_
+  - [ ] 13.2 Create input validation and sanitization middleware
+    - Validate request body schemas
+    - Sanitize inputs to prevent XSS
+    - Validate and sanitize query parameters
+    - _Requirements: 6.1_
+  - [ ] 13.3 Configure security headers and CORS
+    - Set up Helmet.js for security headers
+    - Configure CORS with allowed origins
+    - Set secure cookie options
+    - _Requirements: 6.1, 6.2_
+  - [ ] 13.4 Write unit tests for security middleware
+    - Test rate limiting enforcement
+    - Test input validation
+    - Test security headers
+    - _Requirements: 6.1, 6.3_
+
+- [ ] 14. Implement authentication API endpoints
+  - [ ] 14.1 Create login endpoint
+    - Implement POST /api/auth/login controller
+    - Validate credentials format
+    - Call Authentication Service
+    - Return token and user info
+    - Set secure HTTP-only cookie
+    - _Requirements: 1.1, 1.2_
+  - [ ] 14.2 Create logout endpoint
+    - Implement POST /api/auth/logout controller
+    - Call Authentication Service to invalidate session
+    - Clear session cookie
+    - _Requirements: 1.5_
+  - [ ] 14.3 Create token refresh endpoint
+    - Implement POST /api/auth/refresh controller
+    - Validate existing token
+    - Generate new token with extended expiration
+    - _Requirements: 5.4_
+  - [ ] 14.4 Create current user endpoint
+    - Implement GET /api/auth/me controller
+    - Return current user info and permissions
+    - Include accessible modules list
+    - _Requirements: 4.1_
+  - [ ] 14.5 Write integration tests for authentication endpoints
+    - Test login flow with valid credentials
+    - Test login with invalid credentials
+    - Test logout flow
+    - Test token refresh
+    - Test current user endpoint
+    - _Requirements: 1.1, 1.2, 1.5, 5.4_
+
+- [ ] 15. Implement user management API endpoints
+  - [ ] 15.1 Create user CRUD endpoints
+    - Implement POST /api/users controller for user creation
+    - Implement GET /api/users controller for listing users
+    - Implement GET /api/users/:id controller for user details
+    - Implement PUT /api/users/:id controller for updates
+    - Implement DELETE /api/users/:id controller for deactivation
+    - Add admin-only authorization checks
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [ ] 15.2 Create user-role management endpoints
+    - Implement POST /api/users/:id/roles controller
+    - Implement DELETE /api/users/:id/roles/:roleId controller
+    - Add admin-only authorization checks
+    - _Requirements: 3.2_
+  - [ ] 15.3 Write integration tests for user management endpoints
+    - Test user creation as admin
+    - Test user listing and retrieval
+    - Test user updates
+    - Test user deactivation
+    - Test role assignment and removal
+    - Test authorization checks
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2_
+
+- [ ] 16. Implement role and permission API endpoints
+  - [ ] 16.1 Create role management endpoints
+    - Implement POST /api/roles controller
+    - Implement GET /api/roles controller
+    - Implement GET /api/roles/:id controller
+    - Implement PUT /api/roles/:id controller
+    - Implement DELETE /api/roles/:id controller
+    - Add admin-only authorization checks
+    - _Requirements: 3.1, 3.4_
+  - [ ] 16.2 Create permission management endpoints
+    - Implement POST /api/roles/:id/permissions controller
+    - Implement DELETE /api/roles/:id/permissions/:permId controller
+    - Implement GET /api/permissions controller
+    - Add admin-only authorization checks
+    - _Requirements: 3.4_
+  - [ ] 16.3 Write integration tests for role and permission endpoints
+    - Test role CRUD operations
+    - Test permission assignment to roles
+    - Test permission listing
+    - Test authorization checks
+    - _Requirements: 3.1, 3.4_
+
+- [ ] 17. Implement module API endpoints
+  - [ ] 17.1 Create module endpoints
+    - Implement GET /api/modules controller for user's accessible modules
+    - Implement GET /api/modules/:id controller for module details
+    - Implement POST /api/modules controller for registration (admin only)
+    - Implement PUT /api/modules/:id controller for updates (admin only)
+    - _Requirements: 4.1_
+  - [ ] 17.2 Write integration tests for module endpoints
+    - Test module listing filtered by user permissions
+    - Test module registration
+    - Test module updates
+    - Test authorization checks
+    - _Requirements: 4.1_
+
+- [ ] 18. Implement authorization check endpoint
+  - [ ] 18.1 Create permission check endpoint
+    - Implement POST /api/authz/check controller
+    - Accept resource and action parameters
+    - Return boolean permission result
+    - _Requirements: 4.2_
+  - [ ] 18.2 Write integration tests for authorization endpoint
+    - Test permission checks for various scenarios
+    - Test with different user roles
+    - _Requirements: 4.2_
+
+- [ ] 19. Create error handling and logging infrastructure
+  - [ ] 19.1 Implement global error handler
+    - Create error handler middleware
+    - Map errors to appropriate HTTP status codes
+    - Format error responses consistently
+    - Log errors with context
+    - _Requirements: 6.4_
+  - [ ] 19.2 Create custom error classes
+    - Define error classes for each error code
+    - Include error codes and messages from design
+    - _Requirements: 1.2, 4.3_
+  - [ ] 19.3 Write tests for error handling
+    - Test error response formatting
+    - Test error code mapping
+    - Test error logging
+    - _Requirements: 1.2, 4.3_
+
+- [ ] 20. Set up application initialization and configuration
+  - [ ] 20.1 Create application bootstrap
+    - Initialize database connections
+    - Initialize Redis connections
+    - Run database migrations
+    - Seed default data
+    - Register routes and middleware
+    - _Requirements: 3.5_
+  - [ ] 20.2 Create health check endpoint
+    - Implement GET /api/health endpoint
+    - Check database connectivity
+    - Check Redis connectivity
+    - Return system status
+    - _Requirements: 6.2_
+  - [ ] 20.3 Create configuration validation
+    - Validate required environment variables on startup
+    - Validate configuration values
+    - Fail fast if configuration is invalid
+    - _Requirements: 6.2_
+
+- [ ] 21. Create API documentation
+  - [ ] 21.1 Set up OpenAPI/Swagger documentation
+    - Install and configure Swagger
+    - Document all API endpoints with request/response schemas
+    - Add authentication requirements to documentation
+    - _Requirements: All API endpoints_
+  - [ ] 21.2 Create API usage examples
+    - Write example requests for common workflows
+    - Document authentication flow
+    - Document authorization patterns
+    - _Requirements: 1.1, 3.2, 4.1_
+
+- [ ] 21.5. Create Dockerfile for backend application
+  - [ ] 21.5.1 Write Dockerfile with multi-stage build
+    - Use Node.js LTS as base image
+    - Create build stage for dependencies and compilation
+    - Create production stage with minimal runtime dependencies
+    - Copy only necessary files to production stage
+    - Set up non-root user for security
+    - Expose application port (3000)
+    - Define health check command
+    - _Requirements: 6.2_
+  - [ ] 21.5.2 Create .dockerignore file
+    - Exclude node_modules, .git, tests, and development files
+    - Optimize build context size
+    - _Requirements: 6.2_
+  - [ ] 21.5.3 Create docker-compose.yml for local development
+    - Define backend service with build configuration
+    - Define PostgreSQL service
+    - Define Redis service
+    - Configure networking and volumes
+    - Set up environment variables
+    - _Requirements: 6.2_
+  - [ ] 21.5.4 Test Docker image locally
+    - Build Docker image
+    - Run container with docker-compose
+    - Test API endpoints
+    - Verify database and Redis connectivity
+    - Check container logs
+    - _Requirements: 6.2_
+
+- [ ] 22. Set up frontend project structure
+  - Create React application with TypeScript
+  - Set up directory structure for components, contexts, hooks, services, and types
+  - Configure build tools (Vite or Create React App)
+  - Install dependencies: React Router, Axios, Material-UI or component library
+  - Configure TypeScript with strict mode
+  - Set up environment variables for API base URL
+  - _Requirements: 6.1_
+
+- [ ] 23. Implement API client and service layer
+  - [ ] 23.1 Create API client with interceptors
+    - Implement Axios instance with base configuration
+    - Add request interceptor to attach auth token
+    - Add response interceptor to handle 401 errors and token refresh
+    - Implement error handling and transformation
+    - _Requirements: 1.4, 5.4_
+  - [ ] 23.2 Create authentication service
+    - Implement login function
+    - Implement logout function
+    - Implement token refresh function
+    - Implement getCurrentUser function
+    - _Requirements: 1.1, 1.5, 5.4_
+  - [ ] 23.3 Create user management service
+    - Implement getUsers function
+    - Implement createUser function
+    - Implement updateUser function
+    - Implement deactivateUser function
+    - Implement assignRole and removeRole functions
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2_
+  - [ ] 23.4 Create role and module services
+    - Implement role CRUD functions
+    - Implement permission management functions
+    - Implement module listing and management functions
+    - _Requirements: 3.1, 3.4, 4.1_
+
+- [ ] 24. Implement authentication context and hooks
+  - [ ] 24.1 Create AuthContext and AuthProvider
+    - Define AuthContext state interface
+    - Implement AuthProvider component with state management
+    - Implement login function that calls API and stores token
+    - Implement logout function that clears state and token
+    - Implement refreshSession function
+    - Load user data and permissions on mount
+    - _Requirements: 1.1, 1.5, 5.4_
+  - [ ] 24.2 Create useAuth hook
+    - Implement hook to access AuthContext
+    - Throw error if used outside AuthProvider
+    - _Requirements: 1.1_
+  - [ ] 24.3 Create usePermissions hook
+    - Implement can, canAny, canAll helper functions
+    - Return permissions array and helper functions
+    - _Requirements: 4.2, 4.5_
+  - [ ] 24.4 Create useSession hook
+    - Monitor session expiration time
+    - Calculate time until expiration
+    - Trigger warning when 5 minutes remain
+    - Provide extendSession and endSession functions
+    - _Requirements: 5.3_
+  - [ ] 24.5 Write unit tests for hooks
+    - Test useAuth hook behavior
+    - Test usePermissions helper functions
+    - Test useSession expiry monitoring
+    - _Requirements: 1.1, 4.2, 5.3_
+
+- [ ] 25. Implement authentication components
+  - [ ] 25.1 Create LoginForm component
+    - Implement form with email and password fields
+    - Add client-side validation (email format, required fields)
+    - Handle form submission and call login service
+    - Display error messages from API
+    - Show loading state during authentication
+    - Redirect to dashboard on success
+    - _Requirements: 6.1, 1.1, 1.2_
+  - [ ] 25.2 Create SessionExpiryModal component
+    - Display modal when session will expire in 5 minutes
+    - Show countdown timer
+    - Implement "Extend Session" button that calls refreshSession
+    - Implement "Logout" button that calls logout
+    - Auto-logout when timer reaches zero
+    - _Requirements: 5.3, 6.1_
+  - [ ] 25.3 Create ProtectedRoute component
+    - Check if user is authenticated
+    - Redirect to login if not authenticated
+    - Optionally check for required permissions or module access
+    - Render children if authorized
+    - _Requirements: 4.2, 4.3_
+  - [ ] 25.4 Write unit tests for authentication components
+    - Test LoginForm rendering and submission
+    - Test SessionExpiryModal countdown and actions
+    - Test ProtectedRoute authorization logic
+    - _Requirements: 6.1, 1.1, 5.3, 4.2_
+
+- [ ] 26. Implement layout components
+  - [ ] 26.1 Create AppLayout component
+    - Implement main layout structure with header and content area
+    - Render Navigation component in header
+    - Provide content area for child components
+    - _Requirements: 6.1_
+  - [ ] 26.2 Create Navigation component
+    - Display Ward Manager branding
+    - Show current user name
+    - Implement logout button
+    - Add module switcher dropdown if user has multiple modules
+    - _Requirements: 6.1, 6.4_
+  - [ ] 26.3 Create ModuleDashboard component
+    - Fetch user's accessible modules from API
+    - Render module cards in grid layout
+    - Display module icon, name, and description
+    - Handle module selection and navigation
+    - Show empty state if no modules available
+    - _Requirements: 6.1, 6.4, 4.1_
+  - [ ] 26.4 Write unit tests for layout components
+    - Test AppLayout rendering
+    - Test Navigation user display and logout
+    - Test ModuleDashboard module rendering
+    - _Requirements: 6.1, 6.4, 4.1_
+
+- [ ] 27. Implement user management components
+  - [ ] 27.1 Create UserList component
+    - Fetch and display paginated user list
+    - Implement search by name or email
+    - Implement filter by status and role
+    - Display user table with columns: Name, Email, Status, Roles, Actions
+    - Add "Create User" button
+    - Implement edit and deactivate actions
+    - _Requirements: 7.2, 7.3, 2.1_
+  - [ ] 27.2 Create UserForm component
+    - Implement form for creating and editing users
+    - Add fields: email, first name, last name, password (create only)
+    - Implement client-side validation
+    - Handle form submission
+    - Display server-side validation errors
+    - Support both create and edit modes
+    - _Requirements: 7.2, 7.3, 2.1, 2.2, 2.3_
+  - [ ] 27.3 Create UserRoleAssignment component
+    - Display available roles with checkboxes
+    - Show currently assigned roles as checked
+    - Handle role selection changes
+    - Implement save functionality
+    - _Requirements: 7.2, 7.4, 3.2_
+  - [ ] 27.4 Write unit tests for user management components
+    - Test UserList rendering and filtering
+    - Test UserForm validation and submission
+    - Test UserRoleAssignment role selection
+    - _Requirements: 7.2, 7.3, 2.1, 3.2_
+
+- [ ] 28. Implement role management components
+  - [ ] 28.1 Create RoleList component
+    - Fetch and display all roles
+    - Indicate system roles with badge
+    - Implement edit and delete actions
+    - Disable delete for system roles
+    - Add "Create Role" button
+    - _Requirements: 7.2, 7.3, 3.1_
+  - [ ] 28.2 Create RoleForm component
+    - Implement form for creating and editing roles
+    - Add fields: name, description
+    - Include PermissionSelector component
+    - Handle form submission
+    - Support both create and edit modes
+    - _Requirements: 7.2, 7.3, 3.1, 3.4_
+  - [ ] 28.3 Create PermissionSelector component
+    - Fetch available permissions grouped by module
+    - Display permissions with checkboxes
+    - Show permission descriptions
+    - Handle permission selection
+    - _Requirements: 7.2, 7.4, 3.4_
+  - [ ] 28.4 Write unit tests for role management components
+    - Test RoleList rendering and system role indication
+    - Test RoleForm validation and submission
+    - Test PermissionSelector permission selection
+    - _Requirements: 7.2, 7.3, 3.1, 3.4_
+
+- [ ] 29. Implement module management components
+  - [ ] 29.1 Create ModuleList component
+    - Fetch and display all registered modules
+    - Show module enabled/disabled status
+    - Implement toggle switch for enable/disable
+    - Add edit action for module details
+    - _Requirements: 7.2, 7.5, 4.1_
+  - [ ] 29.2 Create ModuleForm component
+    - Implement form for editing module details
+    - Add fields: display name, description, route path, icon URL
+    - Handle form submission
+    - _Requirements: 7.2, 7.5, 4.1_
+  - [ ] 29.3 Write unit tests for module management components
+    - Test ModuleList rendering and toggle
+    - Test ModuleForm validation and submission
+    - _Requirements: 7.2, 7.5, 4.1_
+
+- [ ] 30. Implement routing and navigation
+  - [ ] 30.1 Set up React Router configuration
+    - Define routes for login, dashboard, and admin module
+    - Wrap protected routes with ProtectedRoute component
+    - Configure route parameters for user/role/module IDs
+    - _Requirements: 6.1, 6.4_
+  - [ ] 30.2 Create admin module routes
+    - Define routes for user management section
+    - Define routes for role management section
+    - Define routes for module management section
+    - Implement tabbed navigation within admin module
+    - _Requirements: 7.1, 7.2_
+  - [ ] 30.3 Implement navigation guards
+    - Verify admin role for admin module routes
+    - Redirect unauthorized users to dashboard
+    - _Requirements: 7.1, 4.3_
+
+- [ ] 31. Implement UI/UX enhancements
+  - [ ] 31.1 Add loading states
+    - Implement skeleton screens for initial page loads
+    - Add spinners for button actions
+    - Show progress indicators for long operations
+    - _Requirements: 6.1_
+  - [ ] 31.2 Add error handling UI
+    - Implement toast notifications for action results
+    - Create error pages for 404, 403, 500
+    - Add retry buttons for failed operations
+    - _Requirements: 6.1, 6.2_
+  - [ ] 31.3 Implement form validation feedback
+    - Add real-time validation on blur
+    - Display error messages below fields
+    - Show visual indicators (red border, error icon)
+    - Disable submit until form is valid
+    - _Requirements: 6.1, 6.2_
+  - [ ] 31.4 Add accessibility features
+    - Ensure semantic HTML elements
+    - Add ARIA labels for interactive elements
+    - Implement keyboard navigation support
+    - Manage focus for modals
+    - Verify color contrast compliance
+    - _Requirements: 6.1_
+
+- [ ] 32. Write frontend integration tests
+  - [ ] 32.1 Test authentication flow
+    - Test login with valid credentials
+    - Test login with invalid credentials
+    - Test logout flow
+    - Test session expiry and renewal
+    - _Requirements: 1.1, 1.2, 1.5, 5.3_
+  - [ ] 32.2 Test admin user management flow
+    - Test creating a new user
+    - Test editing user details
+    - Test assigning roles to user
+    - Test deactivating user
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.2_
+  - [ ] 32.3 Test admin role management flow
+    - Test creating a new role
+    - Test assigning permissions to role
+    - Test editing role details
+    - Test deleting non-system role
+    - _Requirements: 3.1, 3.4_
+  - [ ] 32.4 Test permission-based UI rendering
+    - Test module visibility based on permissions
+    - Test admin module access restriction
+    - Test action button visibility based on permissions
+    - _Requirements: 4.1, 4.2, 7.1_
+
+- [ ] 33. Implement end-to-end tests
+  - [ ] 33.1 Test complete user journey
+    - Test login to dashboard to module access
+    - Test navigation between modules
+    - Test session management throughout journey
+    - _Requirements: 1.1, 6.4, 5.1_
+  - [ ] 33.2 Test complete admin workflow
+    - Test admin login
+    - Test creating user and assigning roles
+    - Test creating role with permissions
+    - Test verifying user can access assigned modules
+    - _Requirements: 2.1, 3.1, 3.2, 4.1_
+
+- [ ] 34. Perform accessibility testing
+  - [ ] 34.1 Run automated accessibility tests
+    - Use axe-core or similar tool
+    - Test all pages and components
+    - Fix identified issues
+    - _Requirements: 6.1_
+  - [ ] 34.2 Perform manual accessibility testing
+    - Test keyboard navigation
+    - Test screen reader compatibility
+    - Verify focus management
+    - _Requirements: 6.1_
+
+- [ ] 35. Set up AWS infrastructure with Infrastructure as Code
+  - [ ] 35.1 Create VPC and networking infrastructure
+    - Define VPC with CIDR block (e.g., 10.0.0.0/16)
+    - Create public subnets across 3 AZs (for ALB)
+    - Create private subnets across 3 AZs (for ECS tasks)
+    - Create isolated subnets across 3 AZs (for RDS, ElastiCache)
+    - Create Internet Gateway for public subnet internet access
+    - Create NAT Gateways in each AZ for private subnet internet access
+    - Configure route tables for each subnet type
+    - Configure VPC endpoints for ECR, S3, Secrets Manager, CloudWatch
+    - Set up security groups:
+      - ALB: Allow HTTPS (443) and HTTP (80) from internet
+      - ECS: Allow container port from ALB only
+      - RDS: Allow PostgreSQL (5432) from ECS only
+      - ElastiCache: Allow Redis (6379) from ECS only
+    - Configure network ACLs (optional, for additional security)
+    - _Requirements: 6.2_
+  - [ ] 35.2 Provision RDS PostgreSQL database
+    - Create RDS PostgreSQL instance with Multi-AZ deployment
+    - Configure instance type (db.t3.medium for production)
+    - Enable encryption at rest with KMS
+    - Configure automated backups with 7-day retention
+    - Set up security group allowing access from compute layer
+    - Enable Performance Insights
+    - _Requirements: 6.2, 6.5_
+  - [ ] 35.3 Provision ElastiCache Redis cluster
+    - Create ElastiCache Redis cluster with Multi-AZ
+    - Configure node type (cache.t3.medium for production)
+    - Enable cluster mode for horizontal scaling
+    - Enable encryption in transit and at rest
+    - Set up security group allowing access from compute layer
+    - Configure backup settings
+    - _Requirements: 5.1, 6.2_
+  - [ ] 35.4 Set up AWS Secrets Manager
+    - Create secrets for database credentials
+    - Create secrets for JWT signing keys
+    - Create secrets for API keys and tokens
+    - Configure automatic rotation policies for database credentials
+    - Set up IAM policies for Lambda/ECS access to secrets
+    - _Requirements: 6.2, 6.5_
+  - [ ] 35.5 Configure CloudWatch logging and monitoring
+    - Create log groups for application logs
+    - Set up log retention policies (90 days for audit logs)
+    - Create CloudWatch alarms for critical metrics
+    - Set up dashboards for monitoring
+    - Configure SNS topics for alarm notifications
+    - _Requirements: 6.4_
+
+- [ ] 36. Deploy backend API to AWS with ECS Fargate
+  - [ ] 36.1 Create ECR repository
+    - Create private ECR repository for backend application
+    - Configure image scanning on push
+    - Set up lifecycle policies for image retention
+    - Enable encryption at rest
+    - Configure repository permissions
+    - _Requirements: 6.2_
+  - [ ] 36.2 Create Dockerfile and build Docker image
+    - Write Dockerfile for Node.js application
+    - Optimize Docker image (multi-stage build, minimal base image)
+    - Build Docker image locally for testing
+    - Test container locally with docker-compose
+    - _Requirements: 6.2_
+  - [ ] 36.3 Set up Application Load Balancer
+    - Create ALB in public subnets across multiple AZs
+    - Configure security group (allow HTTPS 443, HTTP 80)
+    - Create target group (IP target type for Fargate)
+    - Configure health check endpoint (/api/health)
+    - Set up HTTPS listener with ACM certificate
+    - Set up HTTP listener with redirect to HTTPS
+    - Configure sticky sessions for session affinity
+    - Enable access logs to S3
+    - _Requirements: 6.2_
+  - [ ] 36.4 Create ECS cluster
+    - Create ECS cluster for Fargate tasks
+    - Enable Container Insights for monitoring
+    - Configure cluster settings
+    - _Requirements: 6.2_
+  - [ ] 36.5 Create ECS task definition
+    - Define container specifications (image URI, CPU, memory)
+    - Configure port mappings (container port 3000)
+    - Set up environment variables from Secrets Manager
+    - Configure CloudWatch Logs with awslogs driver
+    - Define health check command
+    - Set up task execution role (ECR pull, Secrets Manager, CloudWatch)
+    - Set up task role (application permissions)
+    - _Requirements: 6.2, 6.5_
+  - [ ] 36.6 Create ECS service
+    - Create ECS service with Fargate launch type
+    - Configure desired task count (2 for production)
+    - Set up load balancer integration with target group
+    - Configure network settings (private subnets, security group)
+    - Set deployment configuration (rolling update)
+    - Enable service discovery with AWS Cloud Map (optional)
+    - _Requirements: 6.2_
+  - [ ] 36.7 Configure ECS auto-scaling
+    - Set up target tracking scaling for CPU utilization (70% target)
+    - Set up target tracking scaling for memory utilization (80% target)
+    - Set up target tracking scaling for ALB request count per target
+    - Configure min/max task counts (2-10 for production)
+    - Set scale-out and scale-in cooldown periods
+    - _Requirements: 6.2_
+  - [ ] 36.8 Configure AWS WAF
+    - Create WAF web ACL
+    - Add rate limiting rules (100 req/min per IP)
+    - Add SQL injection protection rules
+    - Add XSS protection rules
+    - Configure custom rules for authentication endpoints (5 attempts per 15 min)
+    - Associate WAF with Application Load Balancer
+    - Enable WAF logging to CloudWatch or S3
+    - _Requirements: 6.1, 6.3_
+  - [ ] 36.9 Build and push Docker image to ECR
+    - Authenticate Docker to ECR
+    - Build Docker image with production configuration
+    - Tag image with version and git commit SHA
+    - Push image to ECR repository
+    - Verify image in ECR console
+    - _Requirements: 6.2_
+  - [ ] 36.10 Deploy backend application to ECS
+    - Update ECS task definition with new image URI
+    - Deploy updated task definition to ECS service
+    - Monitor deployment progress (rolling update)
+    - Wait for tasks to reach running state
+    - Verify health checks pass
+    - _Requirements: All backend requirements_
+  - [ ] 36.11 Run database migrations
+    - Create one-off ECS task for migrations
+    - Run migration task with same task definition
+    - Monitor migration logs in CloudWatch
+    - Verify migrations completed successfully
+    - _Requirements: All backend requirements_
+  - [ ] 36.12 Seed initial data
+    - Run seed script via ECS task or directly
+    - Create default roles (Admin, User)
+    - Create default permissions
+    - Create initial admin user
+    - Register core modules
+    - _Requirements: 3.5_
+  - [ ] 36.13 Test backend API in AWS environment
+    - Test ALB health check endpoint
+    - Test authentication endpoints via ALB
+    - Test authorization checks
+    - Test database connectivity from ECS tasks
+    - Test Redis session storage from ECS tasks
+    - Verify CloudWatch logs are being generated
+    - Test error handling and logging
+    - Verify WAF rules are working
+    - _Requirements: All backend requirements_
+
+- [ ] 37. Deploy frontend to AWS
+  - [ ] 37.1 Set up S3 bucket for static hosting
+    - Create S3 bucket for frontend assets
+    - Configure bucket for static website hosting
+    - Enable versioning
+    - Set up bucket policy for CloudFront access
+    - Enable encryption
+    - _Requirements: 6.1, 6.2_
+  - [ ] 37.2 Configure CloudFront distribution
+    - Create CloudFront distribution with S3 origin
+    - Configure Origin Access Identity for S3 security
+    - Set up custom domain with ACM certificate
+    - Configure cache behaviors and TTLs
+    - Enable Gzip/Brotli compression
+    - Configure error pages (404, 403)
+    - Enable logging to S3
+    - _Requirements: 6.1, 6.2_
+  - [ ] 37.3 Configure Route 53 DNS
+    - Create or update hosted zone
+    - Create A record for CloudFront distribution (frontend)
+    - Create A record for API Gateway (backend API)
+    - Configure health checks
+    - _Requirements: 6.2_
+  - [ ] 37.4 Build and deploy frontend application
+    - Build React application for production
+    - Configure API base URL for AWS environment
+    - Upload build artifacts to S3
+    - Invalidate CloudFront cache
+    - Verify frontend loads correctly
+    - Test API connectivity from frontend
+    - _Requirements: 6.1_
+  - [ ] 37.5 Test frontend in AWS environment
+    - Test login flow
+    - Test navigation between modules
+    - Test admin functionality
+    - Test session management
+    - Verify CloudFront caching
+    - Test from multiple geographic locations
+    - _Requirements: All frontend requirements_
+
+- [ ] 38. Configure monitoring and alerting
+  - [ ] 38.1 Set up CloudWatch dashboards
+    - Create dashboard for API metrics (requests, latency, errors)
+    - Create dashboard for compute metrics (Lambda/ECS)
+    - Create dashboard for database metrics (RDS)
+    - Create dashboard for cache metrics (ElastiCache)
+    - Create dashboard for authentication metrics
+    - _Requirements: 6.4_
+  - [ ] 38.2 Configure CloudWatch alarms
+    - Set up alarm for high error rate (>5% 5xx errors)
+    - Set up alarm for high latency (p99 > 2 seconds)
+    - Set up alarm for database connection issues
+    - Set up alarm for Redis memory usage (>80%)
+    - Set up alarm for failed authentication spike
+    - Configure SNS notifications for alarms
+    - _Requirements: 6.4_
+  - [ ] 38.3 Enable AWS X-Ray tracing (optional)
+    - Add X-Ray daemon sidecar container to ECS task definition
+    - Install and configure X-Ray SDK in application code
+    - Instrument HTTP requests and database calls
+    - Set up service map visualization
+    - Configure sampling rules to control costs
+    - View traces in X-Ray console
+    - _Requirements: 6.4_
+
+- [ ] 39. Implement CI/CD pipeline
+  - [ ] 39.1 Set up source control integration
+    - Configure GitHub/GitLab/CodeCommit repository
+    - Set up branch protection rules
+    - Configure webhooks for CI/CD triggers
+    - _Requirements: 6.2_
+  - [ ] 39.2 Create backend deployment pipeline
+    - Set up build stage:
+      - Run unit tests
+      - Build Docker image
+      - Run security scanning (Trivy, Snyk)
+      - Tag image with git SHA and version
+      - Push image to ECR
+    - Configure deployment stage:
+      - Update ECS task definition with new image
+      - Run database migrations via ECS task
+      - Deploy to ECS service (rolling update)
+      - Wait for health checks to pass
+      - Run smoke tests
+    - Configure manual approval for production
+    - Set up rollback strategy (previous task definition revision)
+    - _Requirements: All backend requirements_
+  - [ ] 39.3 Create frontend deployment pipeline
+    - Set up build stage (compile, test, build)
+    - Configure S3 sync for artifact upload
+    - Add CloudFront invalidation step
+    - Add smoke tests after deployment
+    - Configure manual approval for production
+    - _Requirements: All frontend requirements_
+  - [ ] 39.4 Set up environment-specific deployments
+    - Configure separate pipelines for dev, staging, production
+    - Set up environment-specific configuration
+    - Configure automated deployment to dev/staging
+    - Configure manual approval for production
+    - _Requirements: 6.2_
+
+- [ ] 40. Configure security and compliance
+  - [ ] 40.1 Enable AWS CloudTrail
+    - Create CloudTrail trail for API audit logging
+    - Configure S3 bucket for CloudTrail logs
+    - Enable log file validation
+    - Set up log retention policies
+    - _Requirements: 6.4_
+  - [ ] 40.2 Configure IAM policies and roles
+    - Review and tighten IAM policies for least privilege
+    - Configure ECS task execution role:
+      - ECR image pull permissions
+      - CloudWatch Logs write permissions
+      - Secrets Manager read permissions
+    - Configure ECS task role:
+      - Secrets Manager read for application secrets
+      - RDS connection permissions (if using IAM auth)
+      - ElastiCache connection permissions
+      - S3 access for file uploads (if needed)
+      - CloudWatch custom metrics write
+    - Enable MFA for admin users
+    - _Requirements: 6.2, 6.5_
+  - [ ] 40.3 Enable additional security services (optional)
+    - Enable AWS Config for resource compliance monitoring
+    - Enable GuardDuty for threat detection
+    - Enable Security Hub for security posture management
+    - Configure VPC Flow Logs for network analysis
+    - _Requirements: 6.4_
+  - [ ] 40.4 Perform security audit
+    - Review security group rules
+    - Review IAM policies and roles
+    - Review encryption settings
+    - Review public access settings
+    - Run AWS Trusted Advisor security checks
+    - _Requirements: 6.1, 6.2, 6.5_
+
+- [ ] 41. Set up backup and disaster recovery
+  - [ ] 41.1 Configure RDS backup strategy
+    - Verify automated backups are enabled (7-day retention)
+    - Create manual snapshot before major changes
+    - Set up cross-region snapshot copy for DR
+    - Document point-in-time recovery procedures
+    - _Requirements: 6.5_
+  - [ ] 41.2 Configure ElastiCache backup strategy
+    - Enable automatic backups
+    - Configure backup retention period
+    - Document restore procedures
+    - _Requirements: 5.1_
+  - [ ] 41.3 Create disaster recovery runbooks
+    - Document RDS failover procedures
+    - Document ElastiCache failover procedures
+    - Document infrastructure rebuild procedures
+    - Document data recovery procedures
+    - Test DR procedures in staging environment
+    - _Requirements: 6.2_
+
+- [ ] 42. Perform load and performance testing in AWS
+  - [ ] 42.1 Set up load testing environment
+    - Choose load testing tool (JMeter, k6, Artillery)
+    - Create test scenarios for authentication flows
+    - Create test scenarios for API endpoints
+    - Configure test data and user accounts
+    - _Requirements: All requirements_
+  - [ ] 42.2 Execute load tests
+    - Run load tests against staging environment
+    - Test authentication endpoint performance
+    - Test session management under load
+    - Test permission checking performance
+    - Monitor CloudWatch metrics during tests
+    - _Requirements: 1.1, 5.1, 4.2_
+  - [ ] 42.3 Analyze results and optimize
+    - Analyze CloudWatch metrics and logs
+    - Identify performance bottlenecks
+    - Optimize database queries if needed
+    - Adjust caching strategies if needed
+    - Tune auto-scaling settings
+    - Re-run tests to verify improvements
+    - _Requirements: All requirements_
+
+- [ ] 43. Create operational documentation
+  - [ ] 43.1 Document AWS architecture
+    - Create architecture diagrams
+    - Document all AWS services used
+    - Document network topology
+    - Document security configurations
+    - _Requirements: 6.2_
+  - [ ] 43.2 Create operational runbooks
+    - Document deployment procedures
+    - Document rollback procedures
+    - Document scaling procedures
+    - Document troubleshooting guides
+    - Document incident response procedures
+    - _Requirements: 6.2, 6.4_
+  - [ ] 43.3 Document cost optimization strategies
+    - Document current AWS costs
+    - Identify cost optimization opportunities
+    - Document reserved instance recommendations
+    - Document auto-scaling configurations
+    - _Requirements: 6.2_
